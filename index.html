@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Student Management</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width:800px; margin:28px auto; padding:20px; background:#f7f9fc; color:#222; }
+    h1 { margin-bottom:6px; }
+    .card { background:#fff; padding:16px; border-radius:8px; box-shadow: 0 6px 18px rgba(20,30,50,0.06); margin-bottom:16px; }
+    input { padding:8px; margin-right:8px; border:1px solid #ddd; border-radius:6px; }
+    button { padding:8px 12px; border:0; border-radius:6px; cursor:pointer; }
+    .btn-primary { background:#3b82f6; color:#fff; }
+    .btn-danger { background:#ef4444; color:#fff; }
+    ul { padding-left:0; list-style:none; }
+    li { padding:8px 6px; border-bottom:1px solid #f0f0f0; display:flex; justify-content:space-between; align-items:center; }
+    .small { font-size:13px; color:#555; }
+  </style>
+</head>
+<body>
+  <h1>Student Management System</h1>
+
+  <div class="card">
+    <h3>Add Student</h3>
+    <input id="name" placeholder="Name" />
+    <input id="roll" placeholder="Roll No" />
+    <button class="btn-primary" id="addBtn">Add</button>
+    <div id="addMsg" class="small" style="margin-top:8px"></div>
+  </div>
+
+  <div class="card">
+    <h3>Students</h3>
+    <button id="refreshBtn">Refresh List</button>
+    <ul id="studentList"></ul>
+  </div>
+
+  <div class="card">
+    <h3>Remove Student</h3>
+    <input id="removeRoll" placeholder="Roll No to remove" />
+    <button class="btn-danger" id="removeBtn">Remove</button>
+    <div id="removeMsg" class="small" style="margin-top:8px"></div>
+  </div>
+
+<script>
+  async function loadStudents(){
+    const res = await fetch("/students");
+    if (!res.ok) return console.error("Failed to load");
+    const data = await res.json();
+    const ul = document.getElementById("studentList");
+    ul.innerHTML = "";
+    if (data.length === 0) ul.innerHTML = "<li class='small'>No students found</li>";
+    data.forEach(s => {
+      const li = document.createElement("li");
+      li.innerHTML = `<div><strong>${s.name}</strong> <span class="small"> — ${s.roll}</span></div>
+                      <div><button onclick="removeByRoll('${s.roll}')" style="margin-left:8px;">Remove</button></div>`;
+      ul.appendChild(li);
+    });
+  }
+
+  async function addStudent(){
+    const name = document.getElementById("name").value.trim();
+    const roll = document.getElementById("roll").value.trim();
+    const msg = document.getElementById("addMsg");
+    msg.textContent = "";
+    if (!name || !roll) { msg.textContent = "Both name and roll required."; return; }
+
+    const res = await fetch("/add", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({ name, roll })
+    });
+    const json = await res.json();
+    if (!res.ok) msg.textContent = json.message || "Error";
+    else {
+      msg.textContent = json.message;
+      document.getElementById("name").value = "";
+      document.getElementById("roll").value = "";
+      loadStudents();
+    }
+  }
+
+  async function removeStudent(){
+    const roll = document.getElementById("removeRoll").value.trim();
+    const msg = document.getElementById("removeMsg");
+    msg.textContent = "";
+    if (!roll) { msg.textContent = "Enter roll to remove."; return; }
+
+    const res = await fetch("/remove", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({ roll })
+    });
+    const json = await res.json();
+    if (!res.ok) msg.textContent = json.message || "Error";
+    else {
+      msg.textContent = json.message;
+      document.getElementById("removeRoll").value = "";
+      loadStudents();
+    }
+  }
+
+  // helper used by each list item's remove button
+  function removeByRoll(roll){
+    document.getElementById("removeRoll").value = roll;
+    removeStudent();
+  }
+
+  document.getElementById("addBtn").addEventListener("click", addStudent);
+  document.getElementById("refreshBtn").addEventListener("click", loadStudents);
+  document.getElementById("removeBtn").addEventListener("click", removeStudent);
+
+  // initial load
+  loadStudents();
+</script>
+</body>
+</html>
